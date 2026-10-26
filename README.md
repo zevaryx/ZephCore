@@ -101,9 +101,9 @@ All of this is local behaviour. Nothing here changes the wire protocol, so mixed
 <!-- boards:summary -->
 | Platform | Boards | With published firmware |
 |---|---|---|
-| nRF52840 | 22 | 21 |
-| ESP32 family | 16 | 14 |
-| nRF54L | 4 | 3 |
+| nRF52840 | 23 | 21 |
+| ESP32 family | 17 | 14 |
+| nRF54L | 5 | 3 |
 | EFR32MG24 | 1 | 1 |
 | STM32WL | 1 | 1 |
 | Native Linux (presets) | 3 | 3 |

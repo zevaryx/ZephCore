@@ -1,0 +1,9 @@
+# Copyright (c) 2026 ZephCore
+# SPDX-License-Identifier: MIT
+
+board:
+  name: ab_labs_xiao_nrf52840_lr2021
+  full_name: AB Labs XIAO nRF52840 + Wio-LR2021 carrier
+  vendor: seeed
+  socs:
+  - name: nrf52840

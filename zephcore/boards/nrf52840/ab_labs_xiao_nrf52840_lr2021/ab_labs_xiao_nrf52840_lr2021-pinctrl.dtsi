@@ -1,0 +1,72 @@
+/*
+ * AB Labs XIAO nRF52840 + Wio-LR2021 carrier — pin control
+ * SPDX-License-Identifier: MIT
+ *
+ * MeshCore variants/ab_xiao_nrf52_lr2021 (platformio.ini):
+ * - SPI2 (LR2021): SCK=P0.29, MOSI=P0.04, MISO=P0.05 (D3–D5)
+ * - I2C0: SDA=P0.02, SCL=P1.15 (D0, D10)
+ * - QSPI P25Q16H: same as other XIAO nRF52840 designs
+ */
+
+&pinctrl {
+	spi2_default: spi2_default {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 29)>,
+				<NRF_PSEL(SPIM_MOSI, 0, 4)>,
+				<NRF_PSEL(SPIM_MISO, 0, 5)>;
+		};
+	};
+
+	spi2_sleep: spi2_sleep {
+		group1 {
+			psels = <NRF_PSEL(SPIM_SCK, 0, 29)>,
+				<NRF_PSEL(SPIM_MOSI, 0, 4)>,
+				<NRF_PSEL(SPIM_MISO, 0, 5)>;
+			low-power-enable;
+		};
+	};
+
+	i2c0_default: i2c0_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 2)>,
+				<NRF_PSEL(TWIM_SCL, 1, 15)>;
+		};
+	};
+
+	i2c0_sleep: i2c0_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 0, 2)>,
+				<NRF_PSEL(TWIM_SCL, 1, 15)>;
+			low-power-enable;
+		};
+	};
+
+	qspi_default: qspi_default {
+		group1 {
+			psels = <NRF_PSEL(QSPI_SCK, 0, 21)>,
+				<NRF_PSEL(QSPI_IO0, 0, 20)>,
+				<NRF_PSEL(QSPI_IO1, 0, 24)>,
+				<NRF_PSEL(QSPI_IO2, 0, 22)>,
+				<NRF_PSEL(QSPI_IO3, 0, 23)>,
+				<NRF_PSEL(QSPI_CSN, 0, 25)>;
+		};
+	};
+
+	qspi_sleep: qspi_sleep {
+		group1 {
+			psels = <NRF_PSEL(QSPI_SCK, 0, 21)>,
+				<NRF_PSEL(QSPI_IO0, 0, 20)>,
+				<NRF_PSEL(QSPI_IO1, 0, 24)>,
+				<NRF_PSEL(QSPI_IO2, 0, 22)>,
+				<NRF_PSEL(QSPI_IO3, 0, 23)>;
+			low-power-enable;
+		};
+		/* CS# keeps a pull-up: the flash is in deep power-down in this
+		 * state, and a floating CS# reads low (the part sits selected). */
+		group2 {
+			psels = <NRF_PSEL(QSPI_CSN, 0, 25)>;
+			low-power-enable;
+			bias-pull-up;
+		};
+	};
+};

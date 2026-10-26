@@ -1,0 +1,96 @@
+/*
+ * SPDX-License-Identifier: MIT
+ * AB Labs XIAO ESP32-S3 + Wio-LR2021 carrier
+ *
+ * Pin mapping (from Arduino MeshCore variants/ab_xiao_nrf52_lr2021, with the
+ * XIAO ESP32-S3 header map D0..D10 = GPIO1/2/3/4/5/6/43/44/7/8/9):
+ * - D1 GPIO2   = BUSY       - D6  GPIO43 = RESET
+ * - D2 GPIO3   = NSS        - D7  GPIO44 = LR2021 DIO7 (unused)
+ * - D3 GPIO4   = SPI SCK    - D8  GPIO7  = LR2021 DIO8 (IRQ)
+ * - D4 GPIO5   = SPI MOSI   - D9  GPIO8  = LR2021 DIO10 (unused)
+ * - D5 GPIO6   = SPI MISO   - D0/D10 GPIO1/GPIO9 = I2C SDA/SCL (Qwiic)
+ * - GPIO0 = BOOT button, GPIO21 = user LED (board DTS)
+ *
+ * GPIO bank note (ESP32-S3): GPIO0-31 are on &gpio0, GPIO32-47 on &gpio1.
+ * GPIO43 = &gpio1 pin 11.
+ *
+ * Deliberately no USB OTG include: the USB companion transport would move the
+ * console to uart0 on GPIO43/44, and GPIO43 is the radio RESET. The build
+ * gate matches that include's file name anywhere in this file, so the name is
+ * not spelled out here.
+ */
+
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+#include <zephyr/dt-bindings/gpio/espressif-esp32-gpio.h>
+
+/ {
+	aliases {
+		lora0 = &lora;
+		sw0 = &user_button;
+	};
+
+	buttons: buttons {
+		compatible = "gpio-keys";
+		user_button: button_0 {
+			gpios = <&gpio0 0 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "BOOT";
+			zephyr,code = <INPUT_KEY_0>;
+		};
+	};
+
+	user_btn_longpress {
+		compatible = "zephyr,input-longpress";
+		input = <&buttons>;
+		input-codes = <INPUT_KEY_0>;
+		short-codes = <INPUT_KEY_A>;
+		long-codes = <INPUT_KEY_ENTER>;
+		long-delay-ms = <1000>;
+	};
+
+	page_btn_multitap {
+		compatible = "zephcore,input-multi-tap";
+		input-codes = <INPUT_KEY_A>;
+		tap-codes = <INPUT_KEY_1 INPUT_KEY_LEFT>;
+		tap-delay-ms = <400>;
+	};
+};
+
+/* I2C sensors on the Qwiic connector — auto-detected at runtime */
+&i2c0 {
+	#include "../../common/sensors-i2c.dtsi"
+};
+
+/*
+ * LR2021 on SPI2. ESP32_GPIO_SLEEP_HOLD_EN on NSS and RESET keeps them held
+ * through light sleep (inert when CONFIG_PM=n). The driver takes NSS from
+ * cs-gpios and the ESP32 SPI idles MOSI at 0x00, the chip's NOP, so no
+ * overrun-character is needed.
+ */
+&spi2 {
+	cs-gpios = <&gpio0 3 (GPIO_ACTIVE_LOW | ESP32_GPIO_SLEEP_HOLD_EN)>;  /* D2 GPIO3 NSS */
+
+	lora: lora@0 {
+		compatible = "semtech,lr2021";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+
+		reset-gpios = <&gpio1 11 (GPIO_ACTIVE_LOW | ESP32_GPIO_SLEEP_HOLD_EN)>;  /* D6 GPIO43 */
+		busy-gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;				/* D1 GPIO2 */
+		irq-gpios = <&gpio0 7 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;		/* D8 GPIO7 */
+		irq-dio = <8>;
+
+		/* 32 MHz TCXO on VTCXO at 1.6 V (MeshCore LR2021_TCXO_VOLTAGE) */
+		tcxo-voltage = <1600>;
+
+		rx-boosted;
+	};
+};
+
+/*
+ * Flash partitions live in partitions.overlay (this dir) so the identical map
+ * is fed to both the app and the MCUboot image — see that file and
+ * sysbuild/CMakeLists.txt.
+ */
+
+/* LittleFS auto-mount — standard /lfs mount point */
+#include "../../common/filesystem.dtsi"

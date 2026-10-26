@@ -1,0 +1,254 @@
+/*
+ * AB Labs XIAO nRF54L15 + Wio-LR2021 carrier
+ * Copyright (c) 2026 ZephCore
+ * SPDX-License-Identifier: MIT
+ *
+ * MeshCore variants/ab_xiao_nrf52_lr2021 wiring, on the nRF54L15 header map:
+ *   D1  P1.05  LR2021 BUSY          D6  P2.08  LR2021 NRESET
+ *   D2  P1.06  LR2021 NSS           D7  P2.07  LR2021 DIO7  (unused)
+ *   D3  P1.07  SPI SCK  (spi22)     D8  P2.01  LR2021 DIO8 (IRQ) -> see below
+ *   D4  P1.10  SPI MOSI (spi22)     D9  P2.04  LR2021 DIO11 (unused)
+ *   D5  P1.11  SPI MISO (spi22)     D0  P1.04  IRQ input, via jumper from D8
+ *
+ * IRQ: the radio drives DIO8 onto D8 = P2.01, and port P2 has no GPIOTE, so no
+ * GPIO interrupt can be taken there. A wire from header pin D8 to D0 (P1.04,
+ * gpiote20) carries the same signal to a pin that can. P2.01 is left
+ * unconfigured (high-Z) so it does not fight the wire.
+ *
+ * No I2C: MeshCore's SDA/SCL (D0/D10) straddle P1 and P2, which no TWIM can
+ * span, and D0 is now the IRQ input. No battery ADC: as xiao_nrf54l15, the
+ * SAADC full-scale for the multiplier is not yet pinned down.
+ *
+ * Wio-LR2021 front end as MeshCore drives it: 32 MHz TCXO on VTCXO at 1.6 V and
+ * no RF switch DIOs.
+ *
+ * Flashing: SWD through the XIAO's SAMD11 CMSIS-DAP bridge; the image links at
+ * RRAM base 0x0 (no bootloader), as seeed_lr2021_evk.
+ */
+
+/dts-v1/;
+#include <nordic/nrf54l15_cpuapp.dtsi>
+#include "ab_labs_xiao_nrf54l15_lr2021-pinctrl.dtsi"
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+/ {
+	model = "AB Labs XIAO nRF54L15 LR2021";
+	compatible = "ablabs,xiao-nrf54l15-lr2021";
+
+	chosen {
+		zephyr,sram = &cpuapp_sram;
+		zephyr,flash = &cpuapp_rram;
+		zephyr,flash-controller = &rram_controller;
+		zephyr,console = &uart20;
+		zephyr,shell-uart = &uart20;
+	};
+
+	aliases {
+		lora0 = &lora;
+		led0 = &user_led;
+		sw0 = &user_button;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		user_led: led_0 {
+			gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
+			label = "User LED";
+		};
+	};
+
+	buttons: buttons {
+		compatible = "gpio-keys";
+
+		/* XIAO USR button, P0.00 (gpiote30). */
+		user_button: button_0 {
+			gpios = <&gpio0 0 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			zephyr,code = <INPUT_KEY_0>;
+			label = "USR";
+		};
+	};
+
+	user_btn_longpress {
+		compatible = "zephyr,input-longpress";
+		input = <&buttons>;
+		input-codes = <INPUT_KEY_0>;
+		short-codes = <INPUT_KEY_A>;
+		long-codes = <INPUT_KEY_ENTER>;
+		long-delay-ms = <1000>;
+	};
+
+	user_btn_multitap {
+		compatible = "zephcore,input-multi-tap";
+		input-codes = <INPUT_KEY_A>;
+		tap-codes = <INPUT_KEY_1 INPUT_KEY_LEFT>;
+		tap-delay-ms = <400>;
+	};
+
+	/*
+	 * XIAO 2.4 GHz antenna switch (chip antenna / U.FL) for the SoC's BLE
+	 * radio, boot-on as upstream's xiao_nrf54l15 declares them. Nothing to do
+	 * with the LR2021.
+	 */
+	rfsw_ctl: rfsw-ctl {
+		compatible = "regulator-fixed";
+		regulator-name = "rfsw-ctl";
+		enable-gpios = <&gpio2 5 GPIO_ACTIVE_LOW>;
+		regulator-boot-on;
+	};
+
+	rfsw_pwr: rfsw-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "rfsw-pwr";
+		enable-gpios = <&gpio2 3 GPIO_ACTIVE_HIGH>;
+		regulator-boot-on;
+	};
+
+	/* Battery sense rail enable (P1.15), gating the divider on P1.14/AIN7. */
+	vbat_pwr: vbat-pwr {
+		compatible = "regulator-fixed";
+		regulator-name = "vbat";
+		enable-gpios = <&gpio1 15 GPIO_ACTIVE_HIGH>;
+		regulator-boot-on;
+	};
+};
+
+&cpuapp_sram {
+	status = "okay";
+};
+
+&grtc {
+	owned-channels = <0 1 2 3 4 5 6 7 8 9 10 11>;
+	/* Channels 7-11 reserved for Zero Latency IRQs, 3-4 for FLPR */
+	child-owned-channels = <3 4 7 8 9 10 11>;
+	status = "okay";
+};
+
+&clock {
+	status = "okay";
+};
+
+&xo {
+	status = "okay";
+};
+
+&lfclk {
+	status = "okay";
+};
+
+&uart20 {
+	status = "okay";
+	current-speed = <115200>;
+	pinctrl-0 = <&uart20_default>;
+	pinctrl-1 = <&uart20_sleep>;
+	pinctrl-names = "default", "sleep";
+};
+
+&uart21 {
+	status = "disabled";
+};
+
+&i2c22 {
+	status = "disabled";
+};
+
+&i2c30 {
+	status = "disabled";
+};
+
+&spi22 {
+	status = "okay";
+	cs-gpios = <&gpio1 6 GPIO_ACTIVE_LOW>;	/* D2 = P1.06 NSS */
+	pinctrl-0 = <&spi22_default>;
+	pinctrl-1 = <&spi22_sleep>;
+	pinctrl-names = "default", "sleep";
+	/* 0x00 = LR2021 NOP; Nordic's 0xff default reads as an opcode */
+	overrun-character = <0x00>;
+
+	lora: lora@0 {
+		compatible = "semtech,lr2021";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+
+		reset-gpios = <&gpio2 8 GPIO_ACTIVE_LOW>;			/* D6 = P2.08 */
+		busy-gpios = <&gpio1 5 GPIO_ACTIVE_HIGH>;			/* D1 = P1.05 */
+		irq-gpios = <&gpio1 4 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;	/* D0 = P1.04, jumpered from D8 */
+		irq-dio = <8>;
+		tcxo-voltage = <1600>;
+
+		rx-boosted;
+	};
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&gpio2 {
+	status = "okay";
+};
+
+&gpiote20 {
+	status = "okay";
+};
+
+&gpiote30 {
+	status = "okay";
+};
+
+&regulators {
+	status = "okay";
+};
+
+&vregmain {
+	status = "okay";
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+/* XIAO crystals, values from upstream's xiao_nrf54l15 DTS. */
+&lfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <16000>;
+	status = "okay";
+};
+
+&hfxo {
+	load-capacitors = "internal";
+	load-capacitance-femtofarad = <16000>;
+	status = "okay";
+};
+
+&radio {
+	status = "okay";
+};
+
+&temp {
+	status = "okay";
+};
+
+#include <vendor/nordic/nrf54l15_cpuapp_partition.dtsi>
+
+/*
+ * RRAM layout, no bootloader (as seeed_lr2021_evk):
+ *   0x000000 - 0x14E000  application (links from 0x0)
+ *   0x14E000 - 0x165000  LittleFS
+ */
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &storage_partition;
+
+&cpuapp_rram {
+	partitions {
+		lfs_partition: partition@14e000 {
+			compatible = "zephyr,mapped-partition";
+			label = "lfs";
+			reg = <0x14E000 0x17000>;
+		};
+	};
+};
+
+#include "../../common/filesystem.dtsi"

@@ -1,0 +1,8 @@
+# SPDX-License-Identifier: MIT
+
+board:
+  name: ab_labs_xiao_esp32s3_lr2021
+  full_name: AB Labs XIAO ESP32-S3 + Wio-LR2021 carrier
+  vendor: seeed
+  socs:
+    - name: esp32s3

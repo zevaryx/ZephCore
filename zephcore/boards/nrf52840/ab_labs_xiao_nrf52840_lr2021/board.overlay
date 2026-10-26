@@ -1,0 +1,6 @@
+/*
+ * AB Labs XIAO nRF52840 LR2021 — QSPI /ext for contacts
+ * SPDX-License-Identifier: MIT
+ */
+
+#include "../../common/qspi-ext.dtsi"

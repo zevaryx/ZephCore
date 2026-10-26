@@ -1,0 +1,211 @@
+/*
+ * AB Labs XIAO nRF52840 + Wio-LR2021 carrier
+ * SPDX-License-Identifier: MIT
+ *
+ * MeshCore variants/ab_xiao_nrf52_lr2021 (platformio.ini):
+ *   D1  P0.03  LR2021 BUSY          D6  P1.11  LR2021 NRESET
+ *   D2  P0.28  LR2021 NSS           D7  P1.12  LR2021 DIO7  (unused)
+ *   D3  P0.29  SPI SCK              D8  P1.13  LR2021 IRQ (chip DIO8)
+ *   D4  P0.04  SPI MOSI             D9  P1.14  LR2021 DIO11 (unused)
+ *   D5  P0.05  SPI MISO             D0/D10 P0.02/P1.15  I2C SDA/SCL
+ * - No user button.
+ * - LEDs, battery sense, HICHG and QSPI flash are the XIAO's own, as xiao_nrf52840.
+ * - 32 MHz TCXO on VTCXO at 1.6 V (MeshCore LR2021_TCXO_VOLTAGE); no RF switch DIOs.
+ */
+
+/dts-v1/;
+#include <nordic/nrf52840_qiaa.dtsi>
+#include <nordic/nrf52840_partition.dtsi>
+#include <zephyr/dt-bindings/adc/nrf-saadc.h>
+#include "ab_labs_xiao_nrf52840_lr2021-pinctrl.dtsi"
+
+/delete-node/ &boot_partition;
+/delete-node/ &slot0_partition;
+/delete-node/ &slot1_partition;
+/delete-node/ &storage_partition;
+
+/ {
+	model = "AB Labs XIAO nRF52840 LR2021";
+	compatible = "ablabs,xiao-nrf52840-lr2021";
+
+	chosen {
+		zephyr,code-partition = &code_partition;
+		zephyr,console = &cdc_acm_uart;
+		zephyr,shell-uart = &cdc_acm_uart;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led_red: led_0 {
+			gpios = <&gpio0 26 GPIO_ACTIVE_LOW>;
+			label = "LED red (LoRa TX)";
+		};
+
+		led_blue: led_1 {
+			gpios = <&gpio0 6 GPIO_ACTIVE_LOW>;
+			label = "LED blue";
+		};
+
+		led_green: led_2 {
+			gpios = <&gpio0 30 GPIO_ACTIVE_LOW>;
+			label = "LED green";
+		};
+	};
+
+	/* Battery divider enable, P0.14. Held LOW: see xiao_nrf52840. */
+	vbat_enable: vbat-enable {
+		compatible = "regulator-fixed";
+		regulator-name = "vbat-enable";
+		enable-gpios = <&gpio0 14 GPIO_ACTIVE_LOW>;
+		regulator-always-on;
+	};
+
+	zephyr,user {
+		io-channels = <&adc 7>;
+		vbat-mv-multiplier = <10911>;
+	};
+
+	aliases {
+		led0 = &led_blue;
+		led1 = &led_green;
+		lora-tx-led = &led_red;
+		lora0 = &lora;
+		watchdog0 = &wdt0;
+	};
+};
+
+&reg0 {
+	status = "okay";
+};
+
+&reg1 {
+	regulator-initial-mode = <NRF5X_REG_MODE_DCDC>;
+};
+
+&adc {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@7 {
+		reg = <7>;
+		zephyr,gain = "ADC_GAIN_1_6";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_MICROSECONDS, 10)>;
+		zephyr,input-positive = <NRF_SAADC_AIN7>;
+		zephyr,resolution = <12>;
+	};
+};
+
+&uicr {
+	nfct-pins-as-gpios;
+};
+
+&gpiote {
+	status = "okay";
+};
+
+&gpio0 {
+	status = "okay";
+
+	/* HICHG: BQ25100 at 100 mA, as MeshCore initVariant(). */
+	hichg {
+		gpio-hog;
+		gpios = <13 GPIO_ACTIVE_LOW>;
+		output-high;
+		line-name = "hichg";
+	};
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&uart0 {
+	status = "disabled";
+};
+
+&i2c0 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-1 = <&i2c0_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	#include "../../common/sensors-i2c.dtsi"
+};
+
+&spi2 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	cs-gpios = <&gpio0 28 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&spi2_default>;
+	pinctrl-1 = <&spi2_sleep>;
+	pinctrl-names = "default", "sleep";
+	/* 0x00 = LR2021 NOP; Nordic's 0xff default reads as an opcode */
+	overrun-character = <0x00>;
+
+	lora: lora@0 {
+		compatible = "semtech,lr2021";
+		reg = <0>;
+		spi-max-frequency = <8000000>;
+
+		reset-gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
+		busy-gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>;
+		irq-gpios = <&gpio1 13 (GPIO_PULL_DOWN | GPIO_ACTIVE_HIGH)>;
+		irq-dio = <8>;
+		tcxo-voltage = <1600>;
+
+		rx-boosted;
+	};
+};
+
+&qspi {
+	status = "okay";
+	pinctrl-0 = <&qspi_default>;
+	pinctrl-1 = <&qspi_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	qspi_flash: qspi_flash@0 {
+		compatible = "nordic,qspi-nor";
+		reg = <0>;
+		writeoc = "pp";
+		readoc = "fastread";
+		sck-frequency = <16000000>;
+		jedec-id = [85 60 15];
+		sfdp-bfp = [
+			e5 20 f1 ff  ff ff ff 01  44 eb 08 6b  08 3b 04 bb
+			ee ff ff ff  ff ff 00 ff  ff ff 00 ff  0c 20 0f 52
+			10 d8 00 ff
+		];
+		size = <16777216>;
+		has-dpd;
+		t-enter-dpd = <3000>;
+	};
+};
+
+zephyr_udc0: &usbd {
+	compatible = "nordic,nrf-usbd";
+	status = "okay";
+
+	cdc_acm_uart: cdc_acm_uart {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+#include "../../common/nrf52_partitions_sdv7.dtsi"
+
+&qspi_flash {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		qspi_storage_partition: partition@0 {
+			label = "qspi_storage";
+			reg = <0x00000000 0x00200000>;
+		};
+	};
+};

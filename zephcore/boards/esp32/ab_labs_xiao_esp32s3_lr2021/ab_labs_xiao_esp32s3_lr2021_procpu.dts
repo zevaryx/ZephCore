@@ -1,0 +1,106 @@
+/*
+ * AB Labs XIAO ESP32-S3 + Wio-LR2021 carrier
+ * SPDX-License-Identifier: MIT
+ *
+ * Seeed XIAO ESP32-S3: 8 MB flash, 8 MB octal PSRAM, native USB Serial/JTAG.
+ * The radio, button and I2C sensors are wired in board.overlay; this file is
+ * the SoC/bus layer, as lilygo_t3s3.
+ */
+
+/dts-v1/;
+#include <espressif/esp32s3/esp32s3.dtsi>
+#include "ab_labs_xiao_esp32s3_lr2021-pinctrl.dtsi"
+/*
+ * Base flash map: the default 4M table, which partitions.overlay reclaims by
+ * deleting its labels (see lilygo_t3s3 for why not the _amp_ table).
+ */
+#include <espressif/partitions_0x0_default_4M.dtsi>
+
+/ {
+	model = "AB Labs XIAO ESP32-S3 LR2021";
+	compatible = "ablabs,xiao-esp32s3-lr2021";
+
+	chosen {
+		zephyr,sram = &sram1;
+		zephyr,console = &usb_serial;
+		zephyr,shell-uart = &usb_serial;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &slot0_partition;
+		zephyr,bt-hci = &esp32_bt_hci;
+	};
+
+	aliases {
+		i2c-0 = &i2c0;
+		watchdog0 = &wdt0;
+		led0 = &led0;
+	};
+
+	leds {
+		compatible = "gpio-leds";
+
+		led0: led_0 {
+			gpios = <&gpio0 21 GPIO_ACTIVE_LOW>;
+			label = "USER LED";
+		};
+	};
+};
+
+&flash0 {
+	reg = <0x0 DT_SIZE_M(8)>;
+	ranges = <0x0 0x0 DT_SIZE_M(8)>;
+};
+
+&psram0 {
+	size = <DT_SIZE_M(8)>;
+};
+
+&usb_serial {
+	status = "okay";
+};
+
+&i2c0 {
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+	pinctrl-0 = <&i2c0_default>;
+	pinctrl-names = "default";
+};
+
+&spi2 {
+	#address-cells = <1>;
+	#size-cells = <0>;
+	status = "okay";
+	pinctrl-0 = <&spim2_default>;
+	pinctrl-names = "default";
+};
+
+&gpio0 {
+	status = "okay";
+};
+
+&gpio1 {
+	status = "okay";
+};
+
+&timer0 {
+	status = "okay";
+};
+
+&timer1 {
+	status = "okay";
+};
+
+&wdt0 {
+	status = "okay";
+};
+
+&trng0 {
+	status = "okay";
+};
+
+&esp32_bt_hci {
+	status = "okay";
+};
+
+&wifi {
+	status = "okay";
+};

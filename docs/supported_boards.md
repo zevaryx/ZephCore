@@ -8,6 +8,7 @@ edit the manifests, not the lists.
 
 <!-- boards:nrf52 -->
 ```
+ab_labs_xiao_nrf52840_lr2021   # source-only, no published firmware
 gat562_30s
 heltec_t096
 heltec_t1
@@ -17,7 +18,7 @@ lilygo_techo
 lilygo_timpulse_plus
 meshtracker_x1
 muziworks_r1neo
-promicro_lr2021        # source-only, no published firmware
+promicro_lr2021                # source-only, no published firmware
 promicro_sx1262
 rak3401_1watt
 rak4631
@@ -51,6 +52,7 @@ xiao_nrf52840
 
 <!-- boards:esp32 -->
 ```
+ab_labs_xiao_esp32s3_lr2021/esp32s3/procpu   # source-only, no published firmware
 heltec_wifi_lora32_v3/esp32s3/procpu
 heltec_wifi_lora32_v4/esp32s3/procpu
 heltec_wifi_lora32_v43/esp32s3/procpu
@@ -61,8 +63,8 @@ lilygo_t3s3/esp32s3/procpu
 lilygo_tlora_c6/esp32c6/hpcore
 meshnology_w12/esp32s3/procpu
 station_g2/esp32s3/procpu
-thinknode_m9/esp32s3/procpu                 # source-only, no published firmware
-ttgo_lora32/esp32/procpu                    # source-only, no published firmware
+thinknode_m9/esp32s3/procpu                  # source-only, no published firmware
+ttgo_lora32/esp32/procpu                     # source-only, no published firmware
 ttgo_tbeam/esp32/procpu
 xiao_esp32c3
 xiao_esp32c6/esp32c6/hpcore
@@ -156,9 +158,10 @@ xiao_mg24
 
 <!-- boards:nrf54l -->
 ```
+ab_labs_xiao_nrf54l15_lr2021/nrf54l15/cpuapp   # source-only, no published firmware
 me25ls02/nrf54l15/cpuapp
 seeed_lr2021_evk/nrf54l15/cpuapp
-seeed_lr2021_evk_lm20a/nrf54lm20a/cpuapp   # source-only, no published firmware
+seeed_lr2021_evk_lm20a/nrf54lm20a/cpuapp       # source-only, no published firmware
 xiao_nrf54l15/nrf54l15/cpuapp
 ```
 <!-- /boards -->

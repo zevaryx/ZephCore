@@ -1,0 +1,7 @@
+# AB Labs XIAO ESP32-S3 + Wio-LR2021 carrier board configuration
+
+# SPDX-License-Identifier: MIT
+
+config BOARD_AB_LABS_XIAO_ESP32S3_LR2021
+	select SOC_ESP32S3
+	select SOC_ESP32S3_PROCPU if BOARD_AB_LABS_XIAO_ESP32S3_LR2021_ESP32S3_PROCPU

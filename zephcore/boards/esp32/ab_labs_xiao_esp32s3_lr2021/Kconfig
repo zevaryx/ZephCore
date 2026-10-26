@@ -1,0 +1,4 @@
+# Extra heap on top of the esp32_common.conf platform heap, as xiao_esp32s3.
+config HEAP_MEM_POOL_ADD_SIZE_BOARD
+	int
+	default 4096
