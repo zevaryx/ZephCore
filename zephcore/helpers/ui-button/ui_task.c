@@ -483,6 +483,14 @@ static void action_ble_toggle(void)
 
 static void action_enter_dfu(void)
 {
+	if (IS_ENABLED(CONFIG_ZEPHCORE_BLE_OTA)) {
+		/* ESP32: open the BLE OTA window; the node keeps running. */
+		LOG_INF("BLE OTA window: %s", mesh_ble_ota_open() ? "open" : "failed");
+		get_state()->dfu_confirm_time = 0;
+		schedule_render();
+		return;
+	}
+
 	LOG_INF("entering BLE DFU bootloader");
 
 #ifdef CONFIG_ZEPHCORE_UI_BUZZER

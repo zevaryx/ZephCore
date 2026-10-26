@@ -182,7 +182,9 @@ static const enum ui_page active_pages[] = {
 	UI_PAGE_LEDS,
 	UI_PAGE_SENSORS,
 	UI_PAGE_OFFGRID,
-	UI_PAGE_DFU,
+#if defined(CONFIG_SOC_SERIES_NRF52) || defined(CONFIG_ZEPHCORE_BLE_OTA)
+	UI_PAGE_DFU,            /* nRF52: BLE DFU bootloader; ESP32: BLE OTA window */
+#endif
 	UI_PAGE_SHUTDOWN,
 };
 #endif
@@ -1561,10 +1563,15 @@ static void render_offgrid(void)
 	render_offgrid_mono();
 }
 
+/* ESP32 (BLE OTA): the action opens the upload window instead of rebooting. */
+#define DFU_PAGE_TITLE (IS_ENABLED(CONFIG_ZEPHCORE_BLE_OTA) ? "BLE OTA Update" : "BLE DFU Update")
+
 static void render_dfu_mono(void)
 {
-	draw_centered(centered_row(0, 2), "BLE DFU Update");
-	if (state.dfu_confirm_time != 0) {
+	draw_centered(centered_row(0, 2), DFU_PAGE_TITLE);
+	if (mesh_ble_ota_remaining_s() > 0) {
+		draw_centered(centered_row(1, 2), "Window open");
+	} else if (state.dfu_confirm_time != 0) {
 		draw_centered(centered_row(1, 2), "Press to confirm");
 	} else {
 		draw_centered(centered_row(1, 2), "Press to Run");
@@ -1580,6 +1587,10 @@ static void render_dfu_color(void)
 					? UI_COLOR_WARN : UI_COLOR_ACTIVE);
 	mc_display_color_text(32, y, "BLE update", UI_COLOR_VALUE);
 	y += LINE_H + 4;
+	if (mesh_ble_ota_remaining_s() > 0) {
+		draw_centered_color(y, "Window open", UI_COLOR_ACTIVE);
+		return;
+	}
 	draw_centered_color(y,
 			    state.dfu_confirm_time != 0 ?
 				    "Press to confirm" : "Press to run",

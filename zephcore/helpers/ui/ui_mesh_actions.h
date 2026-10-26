@@ -63,6 +63,10 @@ void mesh_set_offgrid_mode(bool enable);
 bool mesh_offgrid_available(void);
 void mesh_set_leds_disabled(bool disabled);
 void mesh_reboot_to_ota_dfu(void);
+/* BLE OTA window (CONFIG_ZEPHCORE_BLE_OTA, ESP32 companions): open it, and the
+ * seconds left in it. False / 0 in builds without BLE OTA. */
+bool mesh_ble_ota_open(void);
+uint32_t mesh_ble_ota_remaining_s(void);
 void mesh_save_brightness(uint8_t brightness);
 void mesh_save_and_restart(void);
 void mesh_set_wake_on_msg(bool enabled);
